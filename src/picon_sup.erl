@@ -54,7 +54,7 @@ init([]) ->
 	lager:debug("init: Opts='[]'"),
 	Monitor = ?CHILD(picon_monitor, picon_monitor, worker, []),
 	Server = ?CHILD(picon_server, picon_server, worker, []),
-	{ok, {{one_for_one, 5, 10}, [Monitor,Server]}}.
+	{ok, {{rest_for_one, 5, 10}, [Monitor,Server]}}.
 
 %%%===================================================================
 %%% Internal functions
