@@ -1,0 +1,2 @@
+-define(NYI, lager:debug("not yet implemented"), throw(not_yet_implemented)).
+-type nodes() :: [node()].

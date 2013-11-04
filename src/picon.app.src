@@ -1,0 +1,17 @@
+%% vi: ft=erlang
+{application, picon, [
+	{description, ""},
+	{vsn, "1.0.0-a1"},
+	{registered, []},
+	{applications, [
+		lager,
+		kernel,
+		stdlib
+		]},
+	{mod, {picon_app, []}},
+	{env, [
+		{listed,['test1@vs1217.ams2.alvotech.de','test2@vs1217.ams2.alvotech.de','test3@vs1217.ams2.alvotech.de']},
+		{reconnect_sleep, 10000},
+		{reconnect_trials, 500}
+		]}
+	]}.
