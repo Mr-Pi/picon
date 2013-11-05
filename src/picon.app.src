@@ -12,6 +12,6 @@
 	{env, [
 		{listed,['test1@vs1217.ams2.alvotech.de','test2@vs1217.ams2.alvotech.de','test3@vs1217.ams2.alvotech.de']},
 		{reconnect_sleep, 5000},
-		{reconnect_trials, 500}
+		{reconnect_trials, 10} % 720 * 5000ms / 1000ms / 60sec / 60min = 1h
 		]}
 	]}.

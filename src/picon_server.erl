@@ -23,7 +23,7 @@
 
 -include("picon.hrl").
 
--record(state, {}).
+-record(state, {trials=[]}).
 
 %%%===================================================================
 %%% API
@@ -62,12 +62,14 @@ init([]) ->
 	lager:debug("init: Opts='[]'"),
 	picon:connect_local_nodes(),
 	lists:foreach(fun(Node) ->
-		connect_node(
-			Node,
-			init,
-			application:get_env(?APPLICATION,reconnect_sleep,5000),
-			application:get_env(?APPLICATION,reconnect_trials,500)
-			)
+		erlang:spawn_link(fun() ->
+			connect_node(
+				Node,
+				init,
+				application:get_env(?APPLICATION,reconnect_sleep,5000),
+				application:get_env(?APPLICATION,reconnect_trials,500)
+				)
+			end)
 		end,
 		application:get_env(?APPLICATION,listed,[])
 		),
@@ -93,7 +95,7 @@ init([]) ->
 handle_call({add, node, Node}, From, State) when is_atom(Node) ->
 	lager:info("~p requested, to add node ~p", [From, Node]),
 	Ref = erlang:make_ref(),
-	erlang:spawn_link(fun() ->
+	Pid = erlang:spawn_link(fun() ->
 		connect_node(
 			Node,
 			Ref,
@@ -101,7 +103,8 @@ handle_call({add, node, Node}, From, State) when is_atom(Node) ->
 			application:get_env(?APPLICATION,reconnect_trials,500)
 			)
 		end),
-	{reply, Ref, State};
+	NewState = State#state{trials=[{Ref,Pid}|State#state.trials]},
+	{reply, Ref, NewState};
 handle_call(Request, From, State) ->
 	lager:warning("unexpected call: Request='~p', From='~p', State='~p'", [Request, From, lager:pr(State,?MODULE)]),
 	Reply = ok,
@@ -187,6 +190,13 @@ connect_node(Node, Ref, ReconnectTime, Count) ->
 			picon_monitor:connected(Node, Ref),
 			lager:info("successfully connected node ~p", [Node]);
 		pang ->
+			receive
+				{get_status, Ref, From} ->
+					From ! #connection{state=trials, node=Node, reference=Ref, remaining=Count-1}
+			after
+				0 ->
+					ok
+			end,
 			timer:sleep(ReconnectTime),
 			lager:debug("~p attempts remaining to connect ~p", [Count-1, Node]),
 			connect_node(Node, Ref, ReconnectTime, Count-1)
