@@ -30,7 +30,7 @@ connect_local_nodes() ->
 %% @end
 -spec connect_listed() -> [{node(),reference()|already_connected}].
 connect_listed() ->
-	Nodes = application:get_env(picon,listed,[]),
+	Nodes = application:get_env(?APPLICATION, listed, []),
 	lager:debug("connect listed nodes: ~p", [Nodes]),
 	[{Node,picon:add(Node)} || Node <- Nodes].
 
