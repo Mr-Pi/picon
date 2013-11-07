@@ -41,7 +41,7 @@ start_link() ->
 %% @end
 -spec add(node()) -> reference().
 add(Node) ->
-	gen_server:call(?MODULE, {add, node, Node}).
+	?NYI_T.
 
 %%%===================================================================
 %%% gen_server callbacks
@@ -60,18 +60,14 @@ add(Node) ->
 %%--------------------------------------------------------------------
 init([]) ->
 	lager:debug("init: Opts='[]'"),
-	picon:connect_local_nodes(),
-	lists:foreach(fun(Node) ->
-		erlang:spawn_link(fun() ->
-			connect_node(
-				Node,
-				init,
-				application:get_env(?APPLICATION,reconnect_sleep,5000),
-				application:get_env(?APPLICATION,reconnect_trials,500)
-				)
-			end)
+	lists:foreach(
+		fun(Type) ->
+			case Type of
+				local -> picon:connect_local_nodes();
+				listed -> ?NYI_T
+			end
 		end,
-		application:get_env(?APPLICATION,listed,[])
+		application:get_env(?APPLICATION, startup_connection, [])
 		),
 	picon_monitor:add_handler(picon_monitor),
 	net_kernel:monitor_nodes(true),
@@ -92,22 +88,9 @@ init([]) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
-handle_call({add, node, Node}, From, State) when is_atom(Node) ->
-	lager:info("~p requested, to add node ~p", [From, Node]),
-	Ref = erlang:make_ref(),
-	Pid = erlang:spawn_link(fun() ->
-		connect_node(
-			Node,
-			Ref,
-			application:get_env(?APPLICATION,reconnect_sleep,5000),
-			application:get_env(?APPLICATION,reconnect_trials,500)
-			)
-		end),
-	NewState = State#state{trials=[{Ref,Pid}|State#state.trials]},
-	{reply, Ref, NewState};
 handle_call(Request, From, State) ->
 	lager:warning("unexpected call: Request='~p', From='~p', State='~p'", [Request, From, lager:pr(State,?MODULE)]),
-	Reply = ok,
+	Reply = unexpected,
 	{reply, Reply, State}.
 
 %%--------------------------------------------------------------------
@@ -172,8 +155,8 @@ code_change(OldVsn, State, Extra) ->
 %% @private
 %% @doc connect node
 %% @end
--spec connect_node(node(), reference(), non_neg_integer(), non_neg_integer()) -> none().
-connect_node(Node, Ref, _ReconnectTime, 0) ->
+-spec connect_node(node(), reference(), non_neg_integer(), non_neg_integer(), waiting | reconnecting) -> none().
+connect_node(Node, Ref, _ReconnectTime, 0, _CType) ->
 	lager:debug("try to connect node ~p", [Node]),
 	case net_adm:ping(Node) of
 		pong ->
@@ -183,7 +166,7 @@ connect_node(Node, Ref, _ReconnectTime, 0) ->
 			picon_monitor:failed(Node, Ref),
 			lager:info("fails to connect node ~p", [Node])
 	end;
-connect_node(Node, Ref, ReconnectTime, Count) ->
+connect_node(Node, Ref, ReconnectTime, Count, CType) ->
 	lager:debug("try to connect node ~p", [Node]),
 	case net_adm:ping(Node) of
 		pong ->
@@ -192,13 +175,13 @@ connect_node(Node, Ref, ReconnectTime, Count) ->
 		pang ->
 			receive
 				{get_status, Ref, From} ->
-					From ! #connection{state=trials, node=Node, reference=Ref, remaining=Count-1}
+					From ! #connection{state=CType, node=Node, retrials=Count-1}
 			after
 				0 ->
 					ok
 			end,
 			timer:sleep(ReconnectTime),
 			lager:debug("~p attempts remaining to connect ~p", [Count-1, Node]),
-			connect_node(Node, Ref, ReconnectTime, Count-1)
+			connect_node(Node, Ref, ReconnectTime, Count-1, CType)
 	end.
 

@@ -9,11 +9,12 @@
 
 -export([connect_local_nodes/0,
 	 connect_listed/0,
-	 add/1]).
+	 add/1,
+	 del/1]).
 
 -include("picon.hrl").
 
-%% @doc connects to all local nodes
+%% @doc connect all local nodes
 %% @end
 -spec connect_local_nodes() -> nodes().
 connect_local_nodes() ->
@@ -28,20 +29,23 @@ connect_local_nodes() ->
 
 %% @doc connect all listed nodes
 %% @end
--spec connect_listed() -> [{node(),reference()|already_connected}].
+-spec connect_listed() -> [#connection{}].
 connect_listed() ->
 	Nodes = application:get_env(?APPLICATION, listed, []),
 	lager:debug("connect listed nodes: ~p", [Nodes]),
 	[{Node,picon:add(Node)} || Node <- Nodes].
 
 
-%% @doc add
+%% @doc adds a node to cluster
 %% @end
--spec add(node()) -> already_connected | reference().
+-spec add(node()) -> #connection{}.
 add(Node) ->
-	lager:debug("add node ~p", [Node]),
-	case lists:member(Node,nodes()) of
-		false -> picon_server:add(Node);
-		true -> already_connected
-	end.
+	picon_server:add(Node).
+
+
+%% @doc removes a node from cluster
+%% @end
+-spec del(node()) -> #connection{}.
+del(Node) ->
+	picon_server:del(Node).
 
