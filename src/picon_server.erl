@@ -9,10 +9,6 @@
 
 -behaviour(gen_server).
 
-%% API
--export([start_link/0,
-	 add/1]).
-
 %% gen_server callbacks
 -export([init/1,
 	 handle_call/3,
@@ -20,6 +16,13 @@
 	 handle_info/2,
 	 terminate/2,
 	 code_change/3]).
+
+%% API
+-export([start_link/0,
+	 add/1,
+	 del/1,
+	 connect_local/0,
+	 connect_listed/0]).
 
 -include("picon.hrl").
 
@@ -39,9 +42,38 @@ start_link() ->
 
 %% @doc adds a node to cluster
 %% @end
--spec add(node()) -> reference().
+-spec add(node()) -> #connection{}.
 add(Node) ->
+	lager:debug("add node ~p", [Node]),
 	?NYI_T.
+
+%% @doc removes a node from cluster
+%% @end
+-spec del(node()) -> #connection{}.
+del(Node) ->
+	lager:debug("removes node ~p", [Node]),
+	?NYI_T.
+
+%% @doc connect all local nodes
+%% @end
+-spec connect_local() -> [#connection{}].
+connect_local() ->
+	lager:debug("connect all local nodes"),
+	{ok, NodesPrefixIn} = net_adm:names(),
+	Domains = [ lists:last(string:tokens(atom_to_list(node()),[$@])) | [net_adm:localhost()] ],
+	NodesPrefix = lists:map(fun(X) -> {NodePrefix,_}=X, NodePrefix end, NodesPrefixIn),
+	Nodes = [ list_to_atom(NodePrefix ++ "@" ++ Domain) || NodePrefix <- NodesPrefix, Domain <- Domains ],
+	net_adm:ping_list(Nodes),
+	nodes().
+
+%% @doc connect all listed nodes
+%% @end
+-spec connect_listed() -> [#connection{}].
+connect_listed() ->
+	Nodes = application:get_env(?APPLICATION, listed, []),
+	lager:debug("connect listed nodes: ~p", [Nodes]),
+	[add(Node) || Node <- Nodes].
+	
 
 %%%===================================================================
 %%% gen_server callbacks

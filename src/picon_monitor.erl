@@ -12,9 +12,7 @@
 %% API
 -export([start_link/0,
 	 add_handler/1,
-	 add_handler/2,
-	 connected/2,
-	 failed/2]).
+	 add_handler/2]).
 
 %% gen_event callbacks
 -export([init/1,
@@ -32,22 +30,6 @@
 %%%===================================================================
 %%% API
 %%%===================================================================
-
-%% @doc callback for failed connection request
-%% @end
--spec failed(node(), reference()) -> none().
-failed(Node, init) ->
-	gen_event:notify(?MODULE, #connection{state=failed, node=Node});
-failed(Node, Ref) ->
-	gen_event:notify(?MODULE, #connection{state=failed, node=Node, reference=Ref}).
-
-%% @doc callback for connection request
-%% @end
--spec connected(node(), reference()) -> none().
-connected(Node, init) ->
-	gen_event:notify(?MODULE, #connection{state=successful, node=Node});
-connected(Node, Ref) ->
-	gen_event:notify(?MODULE, #connection{state=successful, node=Node, reference=Ref}).
 
 %% @doc Adds an event handler
 %% @end

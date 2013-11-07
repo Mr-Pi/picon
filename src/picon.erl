@@ -7,7 +7,7 @@
 %%%-------------------------------------------------------------------
 -module(picon).
 
--export([connect_local_nodes/0,
+-export([connect_local/0,
 	 connect_listed/0,
 	 add/1,
 	 del/1]).
@@ -16,25 +16,15 @@
 
 %% @doc connect all local nodes
 %% @end
--spec connect_local_nodes() -> nodes().
-connect_local_nodes() ->
-	lager:debug("connect all local nodes"),
-	{ok, NodesPrefixIn} = net_adm:names(),
-	Domains = [ lists:last(string:tokens(atom_to_list(node()),[$@])) | [net_adm:localhost()] ],
-	NodesPrefix = lists:map(fun(X) -> {NodePrefix,_}=X, NodePrefix end, NodesPrefixIn),
-	Nodes = [ list_to_atom(NodePrefix ++ "@" ++ Domain) || NodePrefix <- NodesPrefix, Domain <- Domains ],
-	net_adm:ping_list(Nodes),
-	nodes().
-
+-spec connect_local() -> [#connection{}].
+connect_local() ->
+	picon_server:connect_local().
 
 %% @doc connect all listed nodes
 %% @end
 -spec connect_listed() -> [#connection{}].
 connect_listed() ->
-	Nodes = application:get_env(?APPLICATION, listed, []),
-	lager:debug("connect listed nodes: ~p", [Nodes]),
-	[{Node,picon:add(Node)} || Node <- Nodes].
-
+	picon_server:connect_listed().
 
 %% @doc adds a node to cluster
 %% @end
