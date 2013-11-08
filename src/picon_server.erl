@@ -55,6 +55,7 @@ del(Node) ->
 	?NYI_T.
 
 %% @doc connect all local nodes
+%% local nodes means nodes on the same machine or domain(they must visible for net_adm)
 %% @end
 -spec connect_local() -> [#connection{}].
 connect_local() ->
@@ -63,8 +64,7 @@ connect_local() ->
 	Domains = [ lists:last(string:tokens(atom_to_list(node()),[$@])) | [net_adm:localhost()] ],
 	NodesPrefix = lists:map(fun(X) -> {NodePrefix,_}=X, NodePrefix end, NodesPrefixIn),
 	Nodes = [ list_to_atom(NodePrefix ++ "@" ++ Domain) || NodePrefix <- NodesPrefix, Domain <- Domains ],
-	net_adm:ping_list(Nodes),
-	nodes().
+	Result = [ connect_node(Node, 50, 5) 
 
 %% @doc connect all listed nodes
 %% @end
@@ -72,7 +72,7 @@ connect_local() ->
 connect_listed() ->
 	Nodes = application:get_env(?APPLICATION, listed, []),
 	lager:debug("connect listed nodes: ~p", [Nodes]),
-	[add(Node) || Node <- Nodes].
+	[ add(Node) || Node <- Nodes ].
 	
 
 %%%===================================================================
@@ -187,33 +187,26 @@ code_change(OldVsn, State, Extra) ->
 %% @private
 %% @doc connect node
 %% @end
--spec connect_node(node(), reference(), non_neg_integer(), non_neg_integer(), waiting | reconnecting) -> none().
-connect_node(Node, Ref, _ReconnectTime, 0, _CType) ->
+-spec connect_node(node(), non_neg_integer(), non_neg_integer(), waiting | reconnecting) -> none().
+connect_node(Node, _ReconnectTime, 0, _CType) ->
 	lager:debug("try to connect node ~p", [Node]),
 	case net_adm:ping(Node) of
 		pong ->
-			picon_monitor:connected(Node, Ref),
+			?NYI,
 			lager:info("successfully connected node ~p", [Node]);
 		pang ->
-			picon_monitor:failed(Node, Ref),
+			?NYI,
 			lager:info("fails to connect node ~p", [Node])
 	end;
-connect_node(Node, Ref, ReconnectTime, Count, CType) ->
+connect_node(Node, ReconnectTime, Count, CType) ->
 	lager:debug("try to connect node ~p", [Node]),
 	case net_adm:ping(Node) of
 		pong ->
-			picon_monitor:connected(Node, Ref),
+			?NYI,
 			lager:info("successfully connected node ~p", [Node]);
 		pang ->
-			receive
-				{get_status, Ref, From} ->
-					From ! #connection{state=CType, node=Node, retrials=Count-1}
-			after
-				0 ->
-					ok
-			end,
 			timer:sleep(ReconnectTime),
 			lager:debug("~p attempts remaining to connect ~p", [Count-1, Node]),
-			connect_node(Node, Ref, ReconnectTime, Count-1, CType)
+			connect_node(Node, ReconnectTime, Count-1, CType)
 	end.
 
