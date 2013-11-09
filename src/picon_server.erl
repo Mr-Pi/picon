@@ -32,30 +32,7 @@
 %%% API
 %%%===================================================================
 
-%% @doc Starts the server
-%% @end
--spec start_link() -> {ok, pid()} | ignore | {error, term()}.
-start_link() ->
-	lager:debug("start link"),
-	gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
-
-
-%% @doc adds a node to cluster
-%% @end
--spec add(node()) -> #connection{}.
-add(Node) ->
-	lager:debug("add node ~p", [Node]),
-	?NYI_T.
-
-%% @doc removes a node from cluster
-%% @end
--spec del(node()) -> #connection{}.
-del(Node) ->
-	lager:debug("removes node ~p", [Node]),
-	?NYI_T.
-
 %% @doc connect all local nodes
-%% local nodes means nodes on the same machine or domain(they must visible for net_adm)
 %% @end
 -spec connect_local() -> [#connection{}].
 connect_local() ->
@@ -64,16 +41,57 @@ connect_local() ->
 	Domains = [ lists:last(string:tokens(atom_to_list(node()),[$@])) | [net_adm:localhost()] ],
 	NodesPrefix = lists:map(fun(X) -> {NodePrefix,_}=X, NodePrefix end, NodesPrefixIn),
 	Nodes = [ list_to_atom(NodePrefix ++ "@" ++ Domain) || NodePrefix <- NodesPrefix, Domain <- Domains ],
-	Result = [ connect_node(Node, 50, 5) 
+	[ connect_node(Node, 50, 5) || Node <- Nodes ].
 
-%% @doc connect all listed nodes
+%% @doc adds all listed nodes to cluster
 %% @end
 -spec connect_listed() -> [#connection{}].
 connect_listed() ->
-	Nodes = application:get_env(?APPLICATION, listed, []),
-	lager:debug("connect listed nodes: ~p", [Nodes]),
-	[ add(Node) || Node <- Nodes ].
+	?NYI_T.
+
+%% @doc adds all nodes in list to cluster, temporary or permanent
+%% @end
+-spec connect_listed(nodes(), permanent | temporary) -> [#connection{}].
+connect_listed(Nodes, CType) ->
+	?NYI_T.
+
+%% @doc adds a node to cluster
+%% @end
+-spec add(node(), permanent | temporary) -> #connection{}.
+add(Node, CType) ->
+	?NYI_T.
 	
+%% @doc modify a connection
+%% @end
+-spec modify(node(), permanent | temporary) -> #connection{}.
+modify(Node, CType) ->
+	?NYI_T.
+
+%% @doc delets/removes a node from cluster
+%% @end
+-spec del(node()) -> #connection{}.
+del(Node) ->
+	?NYI_T.
+
+%% @doc gets the status of all nodes in cluster
+%% @end
+-spec get_status() -> [#connection{}].
+get_status() ->
+	?NYI_T.
+
+%% @doc gets the status of a specified node
+%% @end
+-spec get_status(node()) -> #connection{}.
+get_status(Node) ->
+	?NYI_T.
+
+%% @doc Starts the server
+%% @end
+-spec start_link() -> {ok, pid()} | ignore | {error, term()}.
+start_link() ->
+	lager:debug("start link"),
+	gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
+
 
 %%%===================================================================
 %%% gen_server callbacks
@@ -187,8 +205,8 @@ code_change(OldVsn, State, Extra) ->
 %% @private
 %% @doc connect node
 %% @end
--spec connect_node(node(), non_neg_integer(), non_neg_integer(), waiting | reconnecting) -> none().
-connect_node(Node, _ReconnectTime, 0, _CType) ->
+-spec connect_node(node(), non_neg_integer(), non_neg_integer()) -> none().
+connect_node(Node, _ReconnectTime, 0) ->
 	lager:debug("try to connect node ~p", [Node]),
 	case net_adm:ping(Node) of
 		pong ->
@@ -198,7 +216,7 @@ connect_node(Node, _ReconnectTime, 0, _CType) ->
 			?NYI,
 			lager:info("fails to connect node ~p", [Node])
 	end;
-connect_node(Node, ReconnectTime, Count, CType) ->
+connect_node(Node, ReconnectTime, Count) ->
 	lager:debug("try to connect node ~p", [Node]),
 	case net_adm:ping(Node) of
 		pong ->
@@ -207,6 +225,6 @@ connect_node(Node, ReconnectTime, Count, CType) ->
 		pang ->
 			timer:sleep(ReconnectTime),
 			lager:debug("~p attempts remaining to connect ~p", [Count-1, Node]),
-			connect_node(Node, ReconnectTime, Count-1, CType)
+			connect_node(Node, ReconnectTime, Count-1)
 	end.
 

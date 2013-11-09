@@ -25,7 +25,6 @@
 connect_local() ->
 	picon_server:connect_local().
 
-
 %% @doc adds all listed nodes to cluster
 %% @end
 -spec connect_listed() -> [#connection{}].
