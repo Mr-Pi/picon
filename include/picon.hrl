@@ -3,12 +3,10 @@
 -define(APPLICATION, picon).
 
 -record(connection, {
-		state :: connected | disconnected | waiting | reconnecting | removed | timeout,
+		state :: connected | disconnected | waiting | reconnecting | removed | timeout | undefined,
 		node :: node() ,
 		type :: permanent | temporary,
-		retrials :: non_neg_integer() | none
+		retrials=none :: non_neg_integer() | none
 		}).
--define(CONNECTED(Node), #connection{state=connected, node=Node}).
--define(DISCONNECTED(Node), #connection{state=disconnected, node=Node}).
 
 -type nodes() :: [node()].
