@@ -22,26 +22,23 @@
 
 -include("picon.hrl").
 
--record(state, {nodes=[]}).
+-record(state, {synced=false, connecting=[]}).
 
 %%%===================================================================
 %%% API
 %%%===================================================================
 
-%% @doc connect all local nodes
+%% @doc connect all local nodes, returns a list of all connected local nodes
 %% @end
--spec connect_local() -> [#connection{}].
+-spec connect_local() -> nodes().
 connect_local() ->
+	lager:debug("connecting local nodes..."),
 	{ok, NodesPrefixIn} = net_adm:names(),
 	Domains = [ lists:last(string:tokens(atom_to_list(node()),[$@])) | [net_adm:localhost()] ],
 	NodesPrefix = lists:map(fun(X) -> {NodePrefix,_}=X, NodePrefix end, NodesPrefixIn),
 	Nodes = [ list_to_atom(NodePrefix ++ "@" ++ Domain) ||
 		  NodePrefix <- NodesPrefix, Domain <- Domains ],
-	lager:debug("try to connect possible local nodes: ~p", [Nodes]),
-	CNodes = [ Node || Node <- Nodes, net_adm:ping(Node) =:= pong ],
-	lager:debug("connected to local nodes: ~p", [CNodes]),
-	[ {#connection{state=connected, node=Node, type=temporary}, undefined} ||
-	  Node <- CNodes ].
+	[ Node || Node <- Nodes, net_adm:ping(Node) =:= pong ].
 
 %% @doc Starts the server
 %% @end
@@ -68,14 +65,21 @@ start_link() ->
 %%--------------------------------------------------------------------
 init([]) ->
 	lager:debug("init: Opts='[]'"),
-	State = lists:concat(
-		  [
-		   case Type of
-			   local -> connect_local();
-			   listed -> ?NYI, []
-		   end ||
-		   Type <- application:get_env(?APPLICATION, startup_connection, [])
-		  ]),
+	State = #state{
+		connecting = lists:concat([
+			case StartUp of
+				local ->
+					lists:foreach(fun(Node) ->
+						put(Node, #connection{node=Node, state=connected, type=temporary})
+					end, connect_local()),
+					[];
+				listed ->
+					{ok, Listed} = application:get_env(?APPLICATION, listed),
+					connect(Listed)
+			end ||
+			StartUp <- application:get_env(?APPLICATION, startup_connection, [])]
+			)
+		},
 	picon_monitor:add_handler(picon_monitor),
 	net_kernel:monitor_nodes(true),
 	{ok, State}.
@@ -94,6 +98,11 @@ init([]) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
+handle_call({get, status, any}, _From, State) ->
+	Reply = [ Connection || {_Node, Connection} <- get() ],
+	{reply, Reply, State};
+handle_call({get, status, Node}, _From, State) ->
+	{reply, get(Node), State};
 handle_call(Request, From, State) ->
 	lager:warning("unexpected call: Request='~p', From='~p', State='~p'", [Request, From, lager:pr(State,?MODULE)]),
 	Reply = unexpected,
@@ -123,6 +132,8 @@ handle_cast(Msg, State) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
+handle_info({nodedown, Node}, State) ->
+	?NYI_T;
 handle_info(Info, State) ->
 	lager:warning("unexpected info: Info='~p', State='~p'", [Info, lager:pr(State,?MODULE)]),
 	{noreply, State}.
@@ -157,6 +168,20 @@ code_change(OldVsn, State, Extra) ->
 %%%===================================================================
 %%% Internal functions
 %%%===================================================================
+
+
+%% @doc connects a list of nodes, returns the pids of connecting processes
+%% @end
+-spec connect(nodes()) -> [{node(),pid()}].
+connect(Nodes) when is_list(Nodes) ->
+	{ok, Retrials} = application:get_env(?APPLICATION, reconnect_trials),
+	{ok, ReconnectTime} = application:get_env(?APPLICATION, reconnect_sleep),
+	lager:debug("trais to connect remote nodes ~p, ~p times, wait ~pms", [Nodes, Retrials, ReconnectTime]),
+	[
+	 {Node, erlang:spawn_link(
+		  fun() -> connect_node(Node, ReconnectTime, Retrials) end)} ||
+	 Node <- Nodes
+	 ].
 
 %% @private
 %% @doc connect node

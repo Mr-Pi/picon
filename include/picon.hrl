@@ -6,7 +6,7 @@
 		state :: connected | disconnected | waiting | reconnecting | removed | timeout | undefined,
 		node :: node() ,
 		type :: permanent | temporary,
-		retrials=none :: non_neg_integer() | none
+		retrials={0,0} :: {non_neg_integer(), non_neg_integer()}
 		}).
 
 -type nodes() :: [node()].

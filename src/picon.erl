@@ -11,8 +11,8 @@
 	 connect/2,
 	 modify/2,
 	 del/1,
-	 get_status/0,
-	 get_status/1]).
+	 getStatus/0,
+	 getStatus/1]).
 
 -include("picon.hrl").
 
@@ -25,7 +25,7 @@ connect(local) ->
 	gen_server:call(?SERVER, {connect, local});
 
 connect(listed) ->
-	gen_server:call(?SERVER, {connect, application:get_env(?APPLICATION, listed), permanent});
+	gen_server:call(?SERVER, {connect, listed, permanent});
 
 connect(NodeS) ->
 	gen_server:call(?SERVER, {connect, NodeS, permanent}).
@@ -47,13 +47,13 @@ del(Node) ->
 
 %% @doc gets the status of all nodes in cluster
 %% @end
--spec get_status() -> [#connection{}].
-get_status() ->
+-spec getStatus() -> [#connection{}].
+getStatus() ->
 	gen_server:call(?SERVER, {get, status, any}).
 
-%% @doc gets the status of a specified node
+%% @doc gets the status of a specified node(s)
 %% @end
--spec get_status(node()) -> #connection{}.
-get_status(Node) ->
+-spec getStatus(node() | any) -> #connection{}.
+getStatus(Node) ->
 	gen_server:call(?SERVER, {get, status, Node}).
 
