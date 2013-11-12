@@ -3,6 +3,7 @@ picon
 
 erlang application, to easily connect and monitoring erlang nodes.
 
+**!!! NOTHING IMPLEMENTED YET !!!**
 
 Records
 -------
@@ -33,12 +34,13 @@ To configure picon, simply set the application environment:
 
 You can set followring options:
 
-| Parameter         | Value Type                    | Default | Description                                                       |
-| ----------------- | ----------------------------- | ------- | ----------------------------------------------------------------- |
-| lists             | [{atom(),[node()]}]           | []      | specified a lists of erlang nodes, atom() is the name of a list   | 
-| auto_connect      | [{atom(), connection_type()}] | []      | connects a list of nodes a startup                                |
-| max_retrials      | non_neg_integer()             | 720     | specified the number of retrials                                  |
-| retrials_interval | non_neg_integer()             | 5000    | specified the break between the retrials                          |
+| Parameter           | Value Type                    | Default | Description                                                       |
+| ------------------- | ----------------------------- | ------- | ----------------------------------------------------------------- |
+| lists               | [{atom(),[node()]}]           | []      | specified a lists of erlang nodes, atom() is the name of a list   | 
+| auto_connect        | [{atom(), connection_type()}] | []      | connects a list of nodes a startup                                |
+| auto_connect_remote | boolean()                     | false   | calls `picon:connect(local)` on added nodes                       |
+| max_retrials        | non_neg_integer()             | 720     | specified the number of retrials                                  |
+| retrials_interval   | non_neg_integer()             | 5000    | specified the break between the retrials                          |
 
 
 Callback functions
