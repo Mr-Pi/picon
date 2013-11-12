@@ -74,8 +74,7 @@ init([]) ->
 					end, connect_local()),
 					[];
 				listed ->
-					{ok, Listed} = application:get_env(?APPLICATION, listed),
-					connect(Listed)
+					connect(application:get_env(?APPLICATION, listed, []), permanent)
 			end ||
 			StartUp <- application:get_env(?APPLICATION, startup_connection, [])]
 			)
@@ -99,7 +98,7 @@ init([]) ->
 %% @end
 %%--------------------------------------------------------------------
 handle_call({get, status, any}, _From, State) ->
-	Reply = [ Connection || {_Node, Connection} <- get() ],
+	Reply = [ Connection || {_Node, Connection} <- get(), is_record(Connection, connection) ],
 	{reply, Reply, State};
 handle_call({get, status, Node}, _From, State) ->
 	{reply, get(Node), State};
@@ -118,6 +117,17 @@ handle_call(Request, From, State) ->
 %%                                  {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
+handle_cast({retry, Node, Count}, State) ->
+	Connection = get(Node),
+	{Retrials, _} = Connection#connection.retrials,
+	put(Node, Connection#connection{retrials={Retrials, Count}}),
+	{noreply, State};
+handle_cast({failed, Node}, State) ->
+	Connection = get(Node),
+	{Retrials, _} = Connection#connection.retrials,
+	put(Node, Connection#connection{retrials={Retrials+1, 0}, state=timeout}),
+	NewState = State#state{connecting = proplists:delete(Node, State#state.connecting)},
+	{noreply, NewState};
 handle_cast(Msg, State) ->
 	lager:warning("unexpected cast: Msg='~p', State='~p'", [Msg, lager:pr(State,?MODULE)]),
 	{noreply, State}.
@@ -172,40 +182,36 @@ code_change(OldVsn, State, Extra) ->
 
 %% @doc connects a list of nodes, returns the pids of connecting processes
 %% @end
--spec connect(nodes()) -> [{node(),pid()}].
-connect(Nodes) when is_list(Nodes) ->
-	{ok, Retrials} = application:get_env(?APPLICATION, reconnect_trials),
-	{ok, ReconnectTime} = application:get_env(?APPLICATION, reconnect_sleep),
-	lager:debug("trais to connect remote nodes ~p, ~p times, wait ~pms", [Nodes, Retrials, ReconnectTime]),
+-spec connect(nodes(), temporary | permanent) -> [{node(),pid()}].
+connect(Nodes, CType) when is_list(Nodes) ->
+	lager:debug("tries to connect remote nodes ~p", [Nodes]),
 	[
 	 {Node, erlang:spawn_link(
-		  fun() -> connect_node(Node, ReconnectTime, Retrials) end)} ||
-	 Node <- Nodes
+		  fun() -> connect_node(Node, 0) end)} ||
+	 Node <- Nodes,
+	 put(Node, #connection{node=Node, state=waiting, type=CType}) =/= xyz %the result must always true
 	 ].
 
 %% @private
 %% @doc connect node
 %% @end
--spec connect_node(node(), non_neg_integer(), non_neg_integer()) -> none().
-connect_node(Node, _ReconnectTime, 0) ->
+-spec connect_node(node(), non_neg_integer()) -> none().
+connect_node(Node, Count) ->
 	lager:debug("try to connect node ~p", [Node]),
 	case net_adm:ping(Node) of
 		pong ->
-			?NYI,
+			gen_server:cast(?MODULE, {success, Node, Count}),
 			lager:info("successfully connected node ~p", [Node]);
 		pang ->
-			?NYI,
-			lager:info("fails to connect node ~p", [Node])
-	end;
-connect_node(Node, ReconnectTime, Count) ->
-	lager:debug("try to connect node ~p", [Node]),
-	case net_adm:ping(Node) of
-		pong ->
-			?NYI,
-			lager:info("successfully connected node ~p", [Node]);
-		pang ->
-			timer:sleep(ReconnectTime),
-			lager:debug("~p attempts remaining to connect ~p", [Count-1, Node]),
-			connect_node(Node, ReconnectTime, Count-1)
+			case Count >= application:get_env(?APPLICATION, reconnect_trials, 5) of
+				true ->
+					gen_server:cast(?MODULE, {failed, Node}),
+					lager:info("fails to connect node ~p", [Node]);
+				false ->
+					gen_server:cast(?MODULE, {retry, Node, Count}),
+					ReconnectTime = application:get_env(?APPLICATION, reconnect_sleep, 5000),
+					timer:sleep(ReconnectTime),
+					connect_node(Node, Count+1)
+			end
 	end.
 
