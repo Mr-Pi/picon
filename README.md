@@ -4,6 +4,17 @@ picon
 erlang application, to easily connect and monitoring erlang nodes.
 
 
+Records
+-------
+
+All records a defined in *include/picon.hrl*
+
+	#connection{
+		state :: connected | disconnected | waiting | reconnecting | removed | timeout | undefined,
+		type :: picon:connection_type(),
+		retrials :: {non_neg_integer(), non_neg_integer()}
+		}.
+
 Types
 -----
 
