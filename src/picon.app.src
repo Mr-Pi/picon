@@ -1,0 +1,12 @@
+{application, picon,
+ [
+  {description, ""},
+  {vsn, "1"},
+  {registered, []},
+  {applications, [
+                  kernel,
+                  stdlib
+                 ]},
+  {mod, { picon_app, []}},
+  {env, []}
+ ]}.
