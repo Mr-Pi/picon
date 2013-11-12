@@ -20,6 +20,7 @@ Types
 
 | Type                    | Definition                 | Description                                    |
 | ----------------------- | -------------------------- | ---------------------------------------------- |
+| picon:node_list()       | atom()                     | reference to a list from config                |
 | picon:nodes()           | [node()]                   | A list of erlang nodes                         |
 | picon:connection_type() | temporary &#124; permanent | temporary nodes, don't reconnect automatically |
 | picon:connection()      | #connection{}              | connection is defined in *include/picon.hrl*   |
@@ -43,10 +44,10 @@ You can set followring options:
 Callback functions
 ------------------
 
-| Function                                                              | Return specification                                    | Note                                |
-| --------------------------------------------------------------------- | ------------------------------------------------------- | ----------------------------------- |
-| picon:connect(node() &#124; nodes() &#124; atom(), connection_type()) | [{node(), picon:connection{}] &#124; picon:connection() | node() must be a fullqualified name |
-| picon:remove(node() &#124; nodes() &#124; atom())                     | ok                                                      | **- '' -**                          |
-| picon:modify(node() &#124; nodes() &#124; atom(), connection_type())  | ok                                                      | **- '' -**                          |
-| picon:getStatus(node() &#124; nodes() &#124; atom())                  | [{node(), picon:connection{}] &#124; picon:connection() | **- '' -**                          |
+| Function                                                                                      | Return specification                                    | Note                                |
+| --------------------------------------------------------------------------------------------- | ------------------------------------------------------- | ----------------------------------- |
+| picon:connect(node() &#124; nodes() &#124; picon:node_list() &#124; local, connection_type()) | [{node(), picon:connection{}] &#124; picon:connection() | node() must be a fullqualified name |
+| picon:remove(node() &#124; nodes() &#124; picon:node_list() &#124; local)                     | ok                                                      | **- '' -**                          |
+| picon:modify(node() &#124; nodes() &#124; picon:node_list(), connection_type())               | ok                                                      | **- '' -**                          |
+| picon:getStatus(node() &#124; nodes() &#124; picon:node_list() &#124; local &#124; any)       | [{node(), picon:connection{}] &#124; picon:connection() | **- '' -**                          |
 
