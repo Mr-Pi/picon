@@ -22,7 +22,7 @@ else
 
 	tmux split-window -h 
 	tmux resize-pane -x $RWIDTH
-	tmux split-window 'while true; do rebar get-deps && hg status && sleep 2; done'
+	tmux split-window 'while true; do rebar get-deps && hg status && date && sleep 30; done'
 	tmux resize-pane -y 13
 	tmux select-pane -L
 
