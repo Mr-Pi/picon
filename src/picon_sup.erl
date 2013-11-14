@@ -45,8 +45,9 @@ start_link() ->
                        {error, term()}.
 init([]) ->
 	lager:debug("init: Opts='[]'"),
+	Backup = ?CHILD(picon_backup, picon_backup, worker, []),
 	Server = ?CHILD(picon_server, picon_server, worker, []),
-	{ok, {{one_for_one, 5, 10}, [Server]}}.
+	{ok, {{one_for_one, 5, 10}, [Backup, Server]}}.
 
 %%%===================================================================
 %%% Internal functions

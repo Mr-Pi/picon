@@ -1,0 +1,8 @@
+-define(TIMEOUT, 5000).
+-define(PI_lists, []).
+-define(PI_auto_connect, []).
+-define(PI_start_picon_remote, false).
+-define(PI_auto_connect_remote, false).
+-define(PI_max_retrials, 720).
+-define(PI_retrials_interval, 5000).
+-define(PI_self_type, permanent).

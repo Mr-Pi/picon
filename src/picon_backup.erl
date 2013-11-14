@@ -5,15 +5,15 @@
 %%%
 %%% @end
 %%%-------------------------------------------------------------------
--module(picon_server).
+-module(picon_backup).
 
 -behaviour(gen_server).
 
 -include("picon.hrl").
--include("defaults.hrl").
 
 %% API
--export([start_link/0]).
+-export([start_link/0,
+	 get_node_table/0]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -23,12 +23,17 @@
 	 terminate/2,
 	 code_change/3]).
 
--record(state, {synced=false, backup=true}).
--record(node_table, {node, vsn=0, state, type, reconnects=0, retrials=0}).
+-record(state, {backup=false}).
 
 %%%===================================================================
 %%% API
 %%%===================================================================
+
+%% @doc request the node table
+%% @end
+-spec get_node_table() -> true | false.
+get_node_table() ->
+	gen_server:call(?MODULE, {get, node, table}).
 
 %%--------------------------------------------------------------------
 %% @doc
@@ -58,25 +63,8 @@ start_link() ->
 %%--------------------------------------------------------------------
 init([]) ->
 	lager:debug("init: Opts='[]'"),
-	case picon_backup:get_node_table() of
-		true ->
-			receive
-				{'ETS-TRANSFER',picon_nodes,_,_} -> lager:info("node table restored")
-			after
-				?TIMEOUT -> lager:alert("failed to restore node table")
-			end;
-		false ->
-			ets:new(picon_nodes, [set, public, named_table, compressed,
-					      {keypos, #node_table.node},
-					      {heir, erlang:whereis(picon_backup), []}])
-	end,
-	monitor(process, picon_backup),
-	State = case nodes() of
-			[] ->
-				#state{synced=true};
-			Nodes ->
-				sync(Nodes)
-		end,
+	catch picon_server ! {backup, up, self()},
+	State = #state{},
 	{ok, State}.
 
 %%--------------------------------------------------------------------
@@ -93,9 +81,13 @@ init([]) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
-handle_call({connect, local, CType}, _From, State) ->
-	Reply = ?NYI,
-	{reply, Reply, State};
+handle_call({get, node, table}, {From, _Ref}, State) ->
+	{NewState, Reply} =
+	case State#state.backup of
+		false -> {State, false};
+		Backup -> {State#state{backup=false}, ets:give_away(Backup, From, [])}
+	end,
+	{reply, Reply, NewState};
 
 handle_call(Request, From, State) ->
 	lager:warning("unexpected call: Request='~p', From='~p', State='~p'", [Request, From, lager:pr(State,?MODULE)]),
@@ -126,14 +118,8 @@ handle_cast(Msg, State) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
-handle_info({'DOWN', _Ref, process, {picon_backup, Node}, _Reason}, State) when Node =:= node() ->
-	lager:warning("lost backup process"),
-	{noreply, State#state{backup=false}};
-
-handle_info({backup, up, Pid}, State) ->
-	ets:setopts(picon_nodes, [{heir, Pid, []}]),
-	lager:info("receive new backup process ~p", [Pid]),
-	{noreply, State#state{backup=true}};
+handle_info({'ETS-TRANSFER',Backup,_From,[]}, State) ->
+	{noreply, State#state{backup=Backup}};
 
 handle_info(Info, State) ->
 	lager:warning("unexpected info: Info='~p', State='~p'", [Info, lager:pr(State,?MODULE)]),
@@ -170,12 +156,4 @@ code_change(OldVsn, State, Extra) ->
 %%% Internal functions
 %%%===================================================================
 
-
-
-%% @doc sync nodes
-%% @end
--spec sync(picon:nodes()) -> ok.
-sync(Nodes) ->
-	lager:info("synchronize nodes ~p", [Nodes]),
-	?NYI.
 

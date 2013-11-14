@@ -35,14 +35,15 @@ To configure picon, simply set the application environment:
 
 You can set followring options:
 
-| Parameter           | Value Type                          | Default | Description                                                       |
-| ------------------- | ----------------------------------- | ------- | ----------------------------------------------------------------- |
-| lists               | [{atom(),[node()]}]                 | []      | specified a lists of erlang nodes, atom() is the name of a list   | 
-| auto_connect        | [{atom(), picon:connection_type()}] | []      | connects a list of nodes a startup                                |
-| start_picon_remote  | boolean()                           | false   | is set to `true` picon tries to start picon on new connect nodes  |
-| auto_connect_remote | boolean()                           | false   | calls `picon:connect(local)` on added nodes                       |
-| max_retrials        | non_neg_integer()                   | 720     | specified the number of retrials                                  |
-| retrials_interval   | non_neg_integer()                   | 5000    | specified the break between the retrials                          |
+| Parameter           | Value Type                          | Default   | Description                                                       |
+| ------------------- | ----------------------------------- | --------- | ----------------------------------------------------------------- |
+| lists               | [{atom(),[node()]}]                 | []        | specified a lists of erlang nodes, atom() is the name of a list   | 
+| auto_connect        | [{node_list(), connection_type()}]  | []        | connects a list of nodes a startup                                |
+| start_picon_remote  | boolean()                           | false     | is set to `true` picon tries to start picon on new connect nodes  |
+| auto_connect_remote | boolean()                           | false     | calls `picon:connect(local)` on added nodes                       |
+| max_retrials        | non_neg_integer()                   | 720       | specified the number of retrials                                  |
+| retrials_interval   | non_neg_integer()                   | 5000      | specified the break between the retrials                          |
+| self_type           | connection_type()                   | permanent |                                                                   |
 
 
 Callback functions
