@@ -5,9 +5,11 @@
 %%%
 %%% @end
 %%%-------------------------------------------------------------------
--module(picon_mainServer).
+-module(picon_server).
 
 -behaviour(gen_server).
+
+-include("picon.hrl").
 
 %% API
 -export([start_link/0]).
@@ -20,7 +22,7 @@
 	 terminate/2,
 	 code_change/3]).
 
--record(state, {}).
+-record(state, {vsn=0, synced=false}).
 
 %%%===================================================================
 %%% API
@@ -54,7 +56,12 @@ start_link() ->
 %%--------------------------------------------------------------------
 init([]) ->
 	lager:debug("init: Opts='[]'"),
-	State = #state{},
+	State = case nodes() of
+			[] ->
+				#state{synced=true};
+			Nodes ->
+				?NYI
+		end,
 	{ok, State}.
 
 %%--------------------------------------------------------------------
@@ -71,6 +78,9 @@ init([]) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
+handle_call({connect, local, CType}, _From, State) ->
+	Reply = ?NYI,
+	{reply, Reply, State};
 handle_call(Request, From, State) ->
 	lager:warning("unexpected call: Request='~p', From='~p', State='~p'", [Request, From, lager:pr(State,?MODULE)]),
 	Reply = ok,
