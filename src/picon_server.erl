@@ -171,6 +171,11 @@ code_change(OldVsn, State, Extra) ->
 %%%===================================================================
 
 
+%% @doc connects a node
+%% @end
+-spec connect_node(node(), picon:connection_type()) -> connected | waiting | reconnecting.
+connect_node(Node, CType) ->
+	?NYI.
 
 %% @doc sync nodes
 %% @end

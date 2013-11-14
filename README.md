@@ -20,12 +20,12 @@ All records a defined in *include/picon.hrl*
 Types
 -----
 
-| Type                    | Definition                 | Description                                    |
-| ----------------------- | -------------------------- | ---------------------------------------------- |
-| picon:node_list()       | atom()                     | reference to a list from config                |
-| picon:nodes()           | [node()]                   | A list of erlang nodes                         |
-| picon:connection_type() | temporary &#124; permanent | temporary nodes, don't reconnect automatically |
-| picon:connection()      | #connection{}              | connection is defined in *include/picon.hrl*   |
+| Type                    | Definition                              | Description                                    |
+| ----------------------- | --------------------------------------- | ---------------------------------------------- |
+| picon:node_list()       | atom()                                  | reference to a list from config                |
+| picon:nodes()           | [node()]                                | A list of erlang nodes                         |
+| picon:connection_type() | temporary &#124; permanent &#124; local | temporary nodes, don't reconnect automatically |
+| picon:connection()      | #connection{}                           | connection is defined in *include/picon.hrl*   |
 
 
 Configuration
