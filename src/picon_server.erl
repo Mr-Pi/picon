@@ -30,13 +30,11 @@
 %%% API
 %%%===================================================================
 
-%%--------------------------------------------------------------------
 %% @doc
 %% Starts the server
 %%
 %% @spec start_link() -> {ok, Pid} | ignore | {error, Error}
 %% @end
-%%--------------------------------------------------------------------
 start_link() ->
 	lager:debug("start link"),
 	gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
@@ -45,7 +43,6 @@ start_link() ->
 %%% gen_server callbacks
 %%%===================================================================
 
-%%--------------------------------------------------------------------
 %% @private
 %% @doc
 %% Initializes the server
@@ -55,7 +52,6 @@ start_link() ->
 %%                     ignore |
 %%                     {stop, Reason}
 %% @end
-%%--------------------------------------------------------------------
 init([]) ->
 	lager:debug("init: Opts='[]'"),
 	case picon_backup:get_node_table() of
@@ -79,7 +75,6 @@ init([]) ->
 		end,
 	{ok, State}.
 
-%%--------------------------------------------------------------------
 %% @private
 %% @doc
 %% Handling call messages
@@ -92,7 +87,6 @@ init([]) ->
 %%                                   {stop, Reason, Reply, State} |
 %%                                   {stop, Reason, State}
 %% @end
-%%--------------------------------------------------------------------
 handle_call({connect, local, CType}, _From, State) ->
 	Reply = ?NYI,
 	{reply, Reply, State};
@@ -102,7 +96,6 @@ handle_call(Request, From, State) ->
 	Reply = ok,
 	{reply, Reply, State}.
 
-%%--------------------------------------------------------------------
 %% @private
 %% @doc
 %% Handling cast messages
@@ -111,12 +104,10 @@ handle_call(Request, From, State) ->
 %%                                  {noreply, State, Timeout} |
 %%                                  {stop, Reason, State}
 %% @end
-%%--------------------------------------------------------------------
 handle_cast(Msg, State) ->
 	lager:warning("unexpected cast: Msg='~p', State='~p'", [Msg, lager:pr(State,?MODULE)]),
 	{noreply, State}.
 
-%%--------------------------------------------------------------------
 %% @private
 %% @doc
 %% Handling all non call/cast messages
@@ -125,7 +116,6 @@ handle_cast(Msg, State) ->
 %%                                   {noreply, State, Timeout} |
 %%                                   {stop, Reason, State}
 %% @end
-%%--------------------------------------------------------------------
 handle_info({'DOWN', _Ref, process, {picon_backup, Node}, _Reason}, State) when Node =:= node() ->
 	lager:warning("lost backup process"),
 	{noreply, State#state{backup=false}};
@@ -139,7 +129,6 @@ handle_info(Info, State) ->
 	lager:warning("unexpected info: Info='~p', State='~p'", [Info, lager:pr(State,?MODULE)]),
 	{noreply, State}.
 
-%%--------------------------------------------------------------------
 %% @private
 %% @doc
 %% This function is called by a gen_server when it is about to
@@ -149,19 +138,16 @@ handle_info(Info, State) ->
 %%
 %% @spec terminate(Reason, State) -> void()
 %% @end
-%%--------------------------------------------------------------------
 terminate(Reason, State) ->
 	lager:debug("terminate: Reason='~p', State='~p'", [Reason, lager:pr(State,?MODULE)]),
 	ok.
 
-%%--------------------------------------------------------------------
 %% @private
 %% @doc
 %% Convert process state when code is changed
 %%
 %% @spec code_change(OldVsn, State, Extra) -> {ok, NewState}
 %% @end
-%%--------------------------------------------------------------------
 code_change(OldVsn, State, Extra) ->
 	lager:notice("code change: OldVsn='~p', State='~p', Extra='~p'", [OldVsn, lager:pr(State,?MODULE), Extra]),
 	{ok, State}.
@@ -184,3 +170,21 @@ sync(Nodes) ->
 	lager:info("synchronize nodes ~p", [Nodes]),
 	?NYI.
 
+
+%% @doc insert node in node table, if vsn higher
+%% @end
+-spec add_to_table(node(), non_neg_integer(),
+		   connected | disconnected | waiting | reconnecting | removed | timeout | undefined,
+		   picon:connection_type(), non_neg_integer(), non_neg_integer()) -> updated | insert | same | old.
+add_to_table(Node, Vsn, State, CType, Reconnects, Retrials) when ets:member(picon_nodes, Node) ->
+	ExistVsn = ets:lookup_element(picon_nodes, Node, #node_table.vsn),
+	?NYI,
+	case Vsn of
+		ExistVsn ->
+			same;
+		NewVsn when ExistVsn < Vsn ->
+			?NYI;
+		OldVsn ->
+			old
+	end.
+	
