@@ -25,7 +25,7 @@
 -type node_list() :: atom().
 %% reverence to a list of nodes, taken form configuration
 
--type connection_type() :: temporary | permanent.
+-type connection_type() :: temporary | permanent | local.
 %% permanent nodes automatically reconnect, temporary doesn't
 
 -type connection() :: #connection{}.

@@ -62,6 +62,7 @@ init([]) ->
 				?TIMEOUT -> lager:alert("failed to restore node table")
 			end;
 		false ->
+			lager:debug("create node table"),
 			ets:new(picon_nodes, [set, public, named_table, compressed,
 					      {keypos, #node_table.node},
 					      {heir, erlang:whereis(picon_backup), []}])
@@ -73,6 +74,9 @@ init([]) ->
 			Nodes ->
 				sync(Nodes)
 		end,
+	net_kernel:monitor_nodes(true), % TODO: set correct flags
+	lager:debug("adds local node to node table"),
+	add_to_table(node(), 0, connected, application:get_env(picon, self_type, ?PI_self_type), 0, 0),
 	{ok, State}.
 
 %% @private
@@ -176,15 +180,19 @@ sync(Nodes) ->
 -spec add_to_table(node(), non_neg_integer(),
 		   connected | disconnected | waiting | reconnecting | removed | timeout | undefined,
 		   picon:connection_type(), non_neg_integer(), non_neg_integer()) -> updated | insert | same | old.
-add_to_table(Node, Vsn, State, CType, Reconnects, Retrials) when ets:member(picon_nodes, Node) ->
-	ExistVsn = ets:lookup_element(picon_nodes, Node, #node_table.vsn),
-	?NYI,
+add_to_table(Node, Vsn, State, CType, Reconnects, Retrials) ->
+	ExistVsn = case ets:member(picon_nodes, Node) of
+			   true -> ets:lookup_element(picon_nodes, Node, #node_table.vsn);
+			   false -> -1
+		   end,
 	case Vsn of
 		ExistVsn ->
 			same;
 		NewVsn when ExistVsn < Vsn ->
-			?NYI;
-		OldVsn ->
+			ets:insert(picon_nodes,
+				   #node_table{node=Node, vsn=NewVsn, state=State, type=CType,
+					       reconnects=Reconnects, retrials=Retrials});
+		_OldVsn ->
 			old
 	end.
 	
