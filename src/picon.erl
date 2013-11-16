@@ -75,6 +75,7 @@ modify(NodeS, CType) ->
 	gen_server:call(?SERVER, {modify, NodeS, CType}).
 
 %% @doc gets the status of connected nodes or a specific node(s)
+%% @end
 -spec getStatus(node() | nodes() | node_list() | local | any) -> 
 	[{node(), connection()}] | connection().
 getStatus(NodeS) ->

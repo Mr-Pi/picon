@@ -91,8 +91,8 @@ init([]) ->
 %%                                   {stop, Reason, Reply, State} |
 %%                                   {stop, Reason, State}
 %% @end
-handle_call({connect, local, CType}, _From, State) ->
-	Reply = ?NYI,
+handle_call({connect, NodeS, CType}, _From, State) ->
+	Reply = connect(NodeS, CType),
 	{reply, Reply, State};
 
 handle_call(Request, From, State) ->
@@ -160,12 +160,46 @@ code_change(OldVsn, State, Extra) ->
 %%% Internal functions
 %%%===================================================================
 
+%% @doc calls the correct connection function
+%% works mostly as a bridge
+%% @end
+-spec connect(node() | picon:nodes() | picon:node_list() | local, picon:connection_type()) ->
+	[{node(), picon:connection()}] | picon:connection().
+connect(NodeS, CType) when is_atom(NodeS) ->
+	lager:debug("node(s) ~p should be connects as ~p", [NodeS, CType]),
+	case proplists:is_defined(NodeS, application:get_env(picon, lists, ?PI_lists)) of
+		false ->	% NodeS is a single Node
+			lager:debug("~p is the name of a single node"),
+			connect_node(NodeS, CType);
+		true ->		% NodeS is a list of nodes, defined in configuration
+			lager:debug("~p is the name of a node_list"),
+			?NYI
+	end.
+
 
 %% @doc connects a node
 %% @end
 -spec connect_node(node(), picon:connection_type()) -> connected | waiting | reconnecting.
 connect_node(Node, CType) ->
-	?NYI.
+	lager:debug("node ~p should be connected ~p", [Node, CType]),
+	case ets:member(picon_nodes, Node) of
+		false ->
+			CState =
+			case net_adm:ping(Node) of
+				pong ->
+					lager:debug("node ~p has respond", [Node]),
+					connected;
+				pang ->
+					erlang:spawn_link(
+					  fun() ->
+						timer:sleep(application:get_env(picon, retrials_interval, ?PI_retrials_interval)),
+						connect_node(Node, CType)
+					  end)
+			end,
+			add_to_table(Node, 0, CState, CType, 0, 0);
+		true ->
+			?NYI %means reconnecting
+	end.
 
 %% @doc sync nodes
 %% @end
@@ -175,7 +209,7 @@ sync(Nodes) ->
 	?NYI.
 
 
-%% @doc insert node in node table, if vsn higher
+%% @doc updates node table
 %% @end
 -spec add_to_table(node(), non_neg_integer(),
 		   connected | disconnected | waiting | reconnecting | removed | timeout | undefined,
